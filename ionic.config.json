@@ -1,0 +1,7 @@
+{
+  "name": "appStart",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
