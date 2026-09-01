@@ -1,26 +1,48 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title> Memorama </ion-title>
+    <ion-title>MEMORAMA</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-label">PARES</span>
+      <span class="stat-value">{{ matches }}/{{ pairs }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">INTENTOS</span>
+      <span class="stat-value">{{ attempts }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">RÉCORD</span>
+      <span class="stat-value">{{ bestAttempts || '--' }}</span>
+    </div>
+    <ion-button size="small" fill="outline" (click)="newGame()"
+      >Reiniciar</ion-button
+    >
+  </div>
 
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>
-      Start with Ionic
-      <a
-        target="_blank"
-        rel="noopener noreferrer"
-        href="https://ionicframework.com/docs/components"
-        >UI Components</a
-      >
-    </p>
+  @if (finished) {
+  <div class="message">◆ SISTEMA COMPLETADO · {{ attempts }} INTENTOS ◆</div>
+  }
+
+  <div class="board">
+    @for (card of cards; track card.id) {
+    <button
+      class="card"
+      [class.revealed]="card.revealed || card.matched"
+      [class.matched]="card.matched"
+      [disabled]="boardLocked || card.revealed || card.matched"
+      (click)="onCardClick(card)"
+    >
+      <div class="face back">
+        <span class="glyph"></span>
+      </div>
+      <div class="face front">
+        <img [src]="card.icon" [alt]="card.name" />
+      </div>
+    </button>
+    }
   </div>
 </ion-content>
