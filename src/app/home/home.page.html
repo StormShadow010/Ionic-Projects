@@ -1,10 +1,18 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>MEMORAMA</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openHistory()">HISTORIAL</ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <div class="player">
+    <span class="player-label">JUGADOR</span>
+    <span class="player-name">{{ playerName || 'SIN IDENTIFICAR' }}</span>
+  </div>
+
   <div class="stats">
     <div class="stat">
       <span class="stat-label">PARES</span>
@@ -18,9 +26,9 @@
       <span class="stat-label">RÉCORD</span>
       <span class="stat-value">{{ bestAttempts || '--' }}</span>
     </div>
-    <ion-button size="small" fill="outline" (click)="newGame()"
-      >Reiniciar</ion-button
-    >
+    <ion-button size="small" fill="outline" (click)="newGame()">
+      Reiniciar
+    </ion-button>
   </div>
 
   @if (finished) {
@@ -45,4 +53,57 @@
     </button>
     }
   </div>
+
+  <!-- Alerta que aparece SOLO al completar la partida -->
+  <ion-alert
+    [isOpen]="isNameAlertOpen"
+    header="PARTIDA COMPLETADA"
+    message="Digite su nombre para el registro"
+    [backdropDismiss]="false"
+    [inputs]="alertInputs"
+    [buttons]="alertButtons"
+    (didDismiss)="onNameAlertDismiss()"
+  ></ion-alert>
+
+  <!-- Sin ng-template: con CUSTOM_ELEMENTS_SCHEMA el contenido va directo -->
+  <ion-modal
+    class="history-modal"
+    [isOpen]="isHistoryOpen"
+    [breakpoints]="[0, 0.5, 0.9]"
+    [initialBreakpoint]="0.5"
+    (didDismiss)="closeHistory()"
+  >
+    <ion-header [translucent]="true">
+      <ion-toolbar>
+        <ion-title>REGISTRO DE PARTIDAS</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeHistory()">CERRAR</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content>
+      @if (history.length === 0) {
+      <div class="empty">SIN REGISTROS</div>
+      } @else {
+      <ion-list lines="none" class="history-list">
+        @for (h of history; track $index) {
+        <ion-item class="history-item">
+          <div class="history-row">
+            <div class="h-main">
+              <span class="h-name">{{ h.nombre }}</span>
+              <span class="h-date">{{ h.fecha }}</span>
+              <span class="h-pairs">{{ h.pairs }} PARES</span>
+            </div>
+            <div class="h-attempts">
+              <span class="h-num">{{ h.attempts }}</span>
+              <span class="h-tag">INTENTOS</span>
+            </div>
+          </div>
+        </ion-item>
+        }
+      </ion-list>
+      }
+    </ion-content>
+  </ion-modal>
 </ion-content>

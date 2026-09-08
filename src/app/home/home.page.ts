@@ -10,6 +10,15 @@ import { StorageService } from '../service/storage';
 
 const DEVICON = 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons';
 const FLIP_BACK_DELAY = 800;
+const ASK_NAME_DELAY = 700; // deja ver la última carta antes de la alerta
+
+/** Fila ya lista para pintar: la fecha viene formateada, no ISO. */
+interface HistoryRow {
+  nombre: string;
+  fecha: string;
+  attempts: number;
+  pairs: number;
+}
 
 @Component({
   selector: 'app-home',
@@ -40,30 +49,78 @@ export class HomePage implements OnInit {
     { name: 'Astro', icon: `${DEVICON}/astro/astro-original.svg` },
   ];
 
-  pairs = 2;
+  pairs = 8;
   matches = 0;
   attempts = 0;
   bestAttempts = 0;
+
+  playerName = '';
 
   cards: Card[] = [];
   firstPick: Card | null = null;
   secondPick: Card | null = null;
   boardLocked = false;
 
+  // ---------- modal de historial ----------
+  isHistoryOpen = false;
+  history: HistoryRow[] = [];
+
+  // ---------- alerta al terminar ----------
+  isNameAlertOpen = false;
+  alertInputs: any[] = [];
+
+  alertButtons = [
+    {
+      text: 'OMITIR',
+      role: 'cancel',
+      handler: () => {
+        this.savePartida('ANÓNIMO');
+      },
+    },
+    {
+      text: 'GUARDAR',
+      handler: (data: { nombre?: string }) => {
+        const nombre = (data.nombre ?? '').trim();
+        // devolver false mantiene la alerta abierta si no escribió nada
+        if (!nombre) return false;
+
+        this.savePartida(nombre);
+        return true;
+      },
+    },
+  ];
+
+  /** Resultado congelado al terminar, por si reinicia mientras responde. */
+  private pendingResult: { attempts: number; pairs: number } | null = null;
+
   private flipBackTimer: ReturnType<typeof setTimeout> | null = null;
+  private askNameTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private dateFormatter = new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   async ngOnInit() {
     await this.storage.init();
     this.bestAttempts = await this.storage.getBestAttempts();
+    this.playerName = await this.storage.getPlayerName();
     this.newGame();
     this.cdr.markForCheck();
   }
 
   newGame() {
-    // Cancela un volteo pendiente si el usuario reinicia a mitad de turno
+    // Cancela temporizadores pendientes si reinicia a mitad de turno
     if (this.flipBackTimer !== null) {
       clearTimeout(this.flipBackTimer);
       this.flipBackTimer = null;
+    }
+    if (this.askNameTimer !== null) {
+      clearTimeout(this.askNameTimer);
+      this.askNameTimer = null;
     }
 
     this.matches = 0;
@@ -135,19 +192,98 @@ export class HomePage implements OnInit {
     }
   }
 
-  private async onGameFinish() {
+  // ---------- fin de partida ----------
+
+  private onGameFinish() {
+    this.pendingResult = { attempts: this.attempts, pairs: this.pairs };
+
+    // El input se arma justo antes de abrir para precargar el último nombre
+    this.alertInputs = [
+      {
+        name: 'nombre',
+        type: 'text',
+        placeholder: 'Nombre del jugador',
+        value: this.playerName,
+        attributes: { maxlength: 20 },
+      },
+    ];
+
+    this.askNameTimer = setTimeout(() => {
+      this.isNameAlertOpen = true;
+      this.askNameTimer = null;
+      this.cdr.markForCheck();
+    }, ASK_NAME_DELAY);
+  }
+
+  /** Escribe la partida en el historial y actualiza el récord. */
+  private async savePartida(nombre: string) {
+    const result = this.pendingResult;
+    if (!result) return;
+    this.pendingResult = null;
+
+    if (nombre !== 'ANÓNIMO') {
+      this.playerName = nombre;
+      await this.storage.savePlayerName(nombre);
+    }
+
     await this.storage.saveHistory({
+      nombre,
       fecha: new Date().toISOString(),
-      attempts: this.attempts,
-      pairs: this.pairs,
+      attempts: result.attempts,
+      pairs: result.pairs,
       win: true,
     });
 
-    const isRecord = await this.storage.saveBestAttemptsIfRecord(this.attempts);
+    const isRecord = await this.storage.saveBestAttemptsIfRecord(
+      result.attempts,
+    );
     if (isRecord) {
-      this.bestAttempts = this.attempts;
+      this.bestAttempts = result.attempts;
+    }
+
+    // Si el modal está abierto, que se vea la partida recién guardada
+    if (this.isHistoryOpen) {
+      await this.loadHistory();
     }
     this.cdr.markForCheck();
+  }
+
+  onNameAlertDismiss() {
+    this.isNameAlertOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  // ---------- historial ----------
+
+  async openHistory() {
+    await this.loadHistory();
+    this.isHistoryOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeHistory() {
+    this.isHistoryOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  private async loadHistory() {
+    const raw = await this.storage.getHistory();
+
+    this.history = raw
+      .map((h) => ({
+        nombre: h.nombre || 'ANÓNIMO',
+        fecha: this.formatDate(h.fecha),
+        attempts: h.attempts,
+        pairs: h.pairs ?? 0,
+        // se conserva el ISO solo para desempatar el orden
+        ts: new Date(h.fecha).getTime() || 0,
+      }))
+      .sort((a, b) => a.attempts - b.attempts || b.ts - a.ts);
+  }
+  /** "07 sept 2026, 03:45 p. m." */
+  private formatDate(iso: string): string {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? '—' : this.dateFormatter.format(d);
   }
 
   private resetPicks() {

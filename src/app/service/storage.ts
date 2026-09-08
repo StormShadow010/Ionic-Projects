@@ -3,14 +3,17 @@ import { Preferences } from '@capacitor/preferences';
 import { Storage } from '@ionic/storage-angular';
 
 export interface PartidaHistorial {
-  fecha: string;
+  nombre: string;
+  fecha: string; // ISO
   attempts: number;
   pairs: number;
   win: boolean;
 }
 
 const KEY_BEST = 'bestAttempts';
+const KEY_NAME = 'playerName';
 const KEY_HISTORY = 'history';
+const MAX_HISTORY = 50;
 
 @Injectable({
   providedIn: 'root',
@@ -29,7 +32,7 @@ export class StorageService {
     return this.ready;
   }
 
-  // ---------- Nivel 1: Preferences (valor simple) ----------
+  // ---------- Nivel 1: Preferences (valores simples) ----------
 
   async getBestAttempts(): Promise<number> {
     const { value } = await Preferences.get({ key: KEY_BEST });
@@ -46,13 +49,23 @@ export class StorageService {
     return isRecord;
   }
 
+  /** El nombre queda guardado para que no lo escriba en cada arranque. */
+  async getPlayerName(): Promise<string> {
+    const { value } = await Preferences.get({ key: KEY_NAME });
+    return value ?? '';
+  }
+
+  async savePlayerName(nombre: string): Promise<void> {
+    await Preferences.set({ key: KEY_NAME, value: nombre });
+  }
+
   // ---------- Nivel 2: Storage (datos estructurados) ----------
 
   async saveHistory(entry: PartidaHistorial): Promise<void> {
     await this.init();
     const history = await this.getHistory();
     history.unshift(entry); // la más reciente de primera
-    await this.ionicStorage!.set(KEY_HISTORY, history);
+    await this.ionicStorage!.set(KEY_HISTORY, history.slice(0, MAX_HISTORY));
   }
 
   async getHistory(): Promise<PartidaHistorial[]> {
@@ -64,5 +77,6 @@ export class StorageService {
     await this.init();
     await this.ionicStorage!.remove(KEY_HISTORY);
     await Preferences.remove({ key: KEY_BEST });
+    await Preferences.remove({ key: KEY_NAME });
   }
 }
