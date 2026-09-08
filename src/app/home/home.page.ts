@@ -9,7 +9,7 @@ import { Card, Framework } from '../types/Card';
 import { StorageService } from '../service/storage';
 
 const DEVICON = 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons';
-const FLIP_BACK_DELAY = 800;
+const FLIP_BACK_DELAY = 600;
 const ASK_NAME_DELAY = 700; // deja ver la última carta antes de la alerta
 
 /** Fila ya lista para pintar: la fecha viene formateada, no ISO. */
