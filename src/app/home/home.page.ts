@@ -1,4 +1,9 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import {
+  Component,
+  CUSTOM_ELEMENTS_SCHEMA,
+  inject,
+  signal,
+} from '@angular/core';
 import {
   IonHeader,
   IonToolbar,
@@ -7,10 +12,23 @@ import {
   IonButton,
   IonFooter,
 } from '@ionic/angular';
-import { Geolocation } from '@capacitor/geolocation';
 import * as L from 'leaflet';
 
-L.Icon.Default.imagePath = 'assets/leaflet/';
+import { PointOfInterest } from '../../models/point-of-interest.model';
+import { POINTS_OF_INTEREST } from '../../data/points-of-interest.data';
+import {
+  CATEGORY_ICONS,
+  DEFAULT_CENTER,
+  DEFAULT_ZOOM,
+  ROUTE_STYLE,
+  TILE_OPTIONS,
+  TILE_URL,
+  USER_ICON,
+  USER_ZOOM,
+} from '../../config/map.config';
+import { LocationService } from '../../services/location.service';
+import { RouteService } from '../../services/route.service';
+import { formatDistance } from '../../utils/format-distance';
 
 @Component({
   selector: 'app-home',
@@ -20,54 +38,113 @@ L.Icon.Default.imagePath = 'assets/leaflet/';
   imports: [IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonFooter],
 })
 export class HomePage {
+  private locationService = inject(LocationService);
+  private routeService = inject(RouteService);
+
   private map!: L.Map;
   private userMarker?: L.Marker;
+  private userLocation?: L.LatLng;
+  private currentRoute?: L.Polyline;
+  private poiLayer = L.layerGroup();
 
-  constructor() {}
+  // signal: Angular actualiza la vista apenas cambia, aunque el cambio venga de Leaflet
+  hasRoute = signal(false);
 
   ionViewDidEnter(): void {
     if (!this.map) {
-      this.initializeMap();
+      this.createMap();
+      this.showPointsOfInterest();
+      this.locateUser();
     }
-    this.map.invalidateSize();
+    // Ionic termina la animación de entrada antes de que el div tenga tamaño real
+    setTimeout(() => this.map.invalidateSize(), 0);
   }
 
-  private initializeMap(): void {
-    this.map = L.map('map').setView([4.60641, -74.08132], 17);
+  async locateUser(): Promise<void> {
+    const location = await this.locationService.getCurrentLocation();
+    if (!location) return;
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(this.map);
+    this.userLocation = location;
 
-    L.marker([4.60641, -74.08132])
+    this.userMarker?.remove();
+    this.userMarker = L.marker(location, { icon: USER_ICON })
       .addTo(this.map)
-      .bindPopup('A pretty CSS popup.<br> Easily customizable.')
+      .bindPopup('You are here!')
       .openPopup();
+
+    this.map.setView(location, USER_ZOOM);
   }
 
-  async Point(): Promise<void> {
-    try {
-      const perm = await Geolocation.checkPermissions();
-      if (perm.location !== 'granted') {
-        await Geolocation.requestPermissions();
-      }
+  clearRoute(): void {
+    this.currentRoute?.remove();
+    this.currentRoute = undefined;
+    this.hasRoute.set(false);
+    this.map.closePopup();
+  }
 
-      const point = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-      });
-      const { latitude: lat, longitude: lng } = point.coords;
+  private createMap(): void {
+    this.map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+    L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(this.map);
+  }
 
-      this.userMarker?.remove();
-      this.userMarker = L.marker([lat, lng])
-        .addTo(this.map)
-        .bindPopup('You are here!')
-        .openPopup();
+  private showPointsOfInterest(): void {
+    this.poiLayer.clearLayers();
 
-      this.map.setView([lat, lng], 17);
-    } catch (err) {
-      console.error('Geolocation error:', err);
+    POINTS_OF_INTEREST.forEach((p) => {
+      const marker = L.marker([p.lat, p.lng], {
+        icon: CATEGORY_ICONS[p.category],
+      })
+        .bindPopup(this.popupBase(p))
+        .addTo(this.poiLayer);
+
+      marker.on('click', () => this.drawRoute(p, marker));
+    });
+
+    this.poiLayer.addTo(this.map);
+
+    // Ajusta el zoom para que se vean todos
+    const bounds = L.latLngBounds(
+      POINTS_OF_INTEREST.map((p) => [p.lat, p.lng] as L.LatLngTuple),
+    );
+    this.map.fitBounds(bounds, { padding: [40, 40] });
+  }
+
+  private async drawRoute(p: PointOfInterest, marker: L.Marker): Promise<void> {
+    const base = this.popupBase(p);
+
+    if (!this.userLocation) {
+      marker.setPopupContent(`${base}<br><i>Ubicación no disponible</i>`);
+      return;
     }
+
+    marker.setPopupContent(`${base}<br>Calculando...`);
+    const destination = L.latLng(p.lat, p.lng);
+
+    try {
+      const { coords, distance } = await this.routeService.getRoute(
+        this.userLocation,
+        destination,
+      );
+
+      this.currentRoute?.remove();
+      this.currentRoute = L.polyline(coords, ROUTE_STYLE).addTo(this.map);
+      this.hasRoute.set(true);
+
+      marker.setPopupContent(
+        `${base}<br>Distance: ${formatDistance(distance)}`,
+      );
+      this.map.fitBounds(this.currentRoute.getBounds(), { padding: [50, 50] });
+    } catch (err) {
+      // Si OSRM falla, muestra al menos la distancia en línea recta
+      const straight = this.userLocation.distanceTo(destination);
+      marker.setPopupContent(
+        `${base}<br>Distancia (línea recta): ${formatDistance(straight)}`,
+      );
+      console.error('Route error:', err);
+    }
+  }
+
+  private popupBase(p: PointOfInterest): string {
+    return `<b>${p.name}</b><br>${p.category}`;
   }
 }

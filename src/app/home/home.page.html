@@ -1,13 +1,18 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
     <ion-title>Map</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content>
   <div id="map"></div>
 </ion-content>
 
 <ion-footer>
-  <ion-button expand="full" (click)="Point()">Go to Location</ion-button>
+  <ion-button expand="full" (click)="locateUser()">Go to Location</ion-button>
+  @if (hasRoute()) {
+  <ion-button expand="full" color="danger" (click)="clearRoute()">
+    Clear Route
+  </ion-button>
+  }
 </ion-footer>
