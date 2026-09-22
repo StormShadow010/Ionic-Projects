@@ -1,14 +1,84 @@
-.centro {
+/* ---------- Galería ---------- */
+
+.galeria {
+  display: grid;
+  /* Columnas automáticas: 2 en celular, más en tablet */
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 4px;
+  padding: 4px;
+  /* Espacio para que el FAB no tape la última fila */
+  padding-bottom: 88px;
+}
+
+.celda {
+  position: relative;
+  /* Miniaturas cuadradas sin deformar la foto */
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--ion-color-step-100, #f2f2f2);
+}
+
+.celda img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+}
+
+.btn-borrar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  --padding-start: 6px;
+  --padding-end: 6px;
+  /* Sombra para que el icono se vea sobre fotos claras */
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7));
+}
+
+/* ---------- Estados vacío / cargando ---------- */
+
+.estado {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  padding: 2rem 0;
+  justify-content: center;
+  height: 70vh;
   color: var(--ion-color-medium);
+  text-align: center;
+  padding: 0 2rem;
+}
+
+.estado p {
+  margin: 0.35rem 0;
+}
+
+.icono-vacio {
+  font-size: 4rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.4;
+}
+
+.tenue {
+  font-size: 0.85rem;
+  opacity: 0.7;
 }
 
 .contador {
   display: block;
-  margin-top: 1.5rem;
-  margin-bottom: 0.25rem;
+  padding: 12px 12px 4px;
   font-size: 0.85rem;
+}
+
+/* ---------- Visor ---------- */
+
+.visor {
+  --background: #000;
+}
+
+.visor img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }

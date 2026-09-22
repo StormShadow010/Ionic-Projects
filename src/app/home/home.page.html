@@ -1,14 +1,87 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title> App Camera </ion-title>
+    <ion-title>Mis Fotos</ion-title>
+    <ion-buttons slot="end">
+      @if (svc.total() > 0) {
+      <ion-button color="danger" (click)="confirmarLimpiar()">
+        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+      </ion-button>
+      }
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <img [src]="photoUrl()" alt="Foto tomada" />
-  <ion-fab horizontal="end" vertical="bottom" (click)="takePicture()">
-    <ion-fab-button>
-      <ion-icon name="add   "></ion-icon>
+  @if (svc.cargando()) {
+  <div class="estado">
+    <ion-spinner></ion-spinner>
+    <p>Cargando galería...</p>
+  </div>
+  } @else if (svc.total() === 0) {
+  <div class="estado">
+    <ion-icon name="images-outline" class="icono-vacio"></ion-icon>
+    <p>Todavía no hay fotos.</p>
+    <p class="tenue">Pulsa el botón de la cámara para tomar la primera.</p>
+  </div>
+  } @else {
+  <ion-note class="contador"> {{ svc.total() }} foto(s) guardada(s) </ion-note>
+
+  <!-- Galería: rejilla de miniaturas cuadradas -->
+  <div class="galeria">
+    @for (foto of svc.fotos(); track foto.id) {
+    <div class="celda">
+      <img
+        [src]="foto.url"
+        [alt]="'Foto del ' + (foto.fecha | date: 'short')"
+        (click)="abrir(foto)"
+      />
+      <ion-button
+        class="btn-borrar"
+        fill="clear"
+        size="small"
+        color="light"
+        (click)="confirmarBorrar(foto)"
+      >
+        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+      </ion-button>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Botón flotante de cámara -->
+  <ion-fab horizontal="end" vertical="bottom" slot="fixed">
+    <ion-fab-button [disabled]="ocupado()" (click)="elegirOrigen()">
+      @if (ocupado()) {
+      <ion-spinner name="crescent"></ion-spinner>
+      } @else {
+      <ion-icon name="camera-outline"></ion-icon>
+      }
     </ion-fab-button>
   </ion-fab>
+
+  <!-- Visor a pantalla completa -->
+  <ion-modal [isOpen]="ampliada() !== null" (didDismiss)="cerrar()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ ampliada()?.fecha | date: 'medium' }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button color="danger" (click)="confirmarBorrar(ampliada()!)">
+              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            </ion-button>
+            <ion-button (click)="cerrar()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="visor">
+        @if (ampliada(); as foto) {
+        <img [src]="foto.url" alt="Foto ampliada" />
+        }
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>
