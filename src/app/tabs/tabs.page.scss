@@ -1,1 +1,11 @@
+.tab-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
 
+ion-tab-button.tab-selected .tab-icon {
+  opacity: 1;
+}
