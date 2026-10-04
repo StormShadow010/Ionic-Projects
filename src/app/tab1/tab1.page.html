@@ -6,4 +6,45 @@
 
 <ion-content [fullscreen]="true">
   <div #mapContainer class="map"></div>
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end" class="fab-stack">
+    <ion-fab-button
+      color="light"
+      size="small"
+      [disabled]="locating()"
+      (click)="locateMe()"
+    >
+      <ion-icon name="locate-outline"></ion-icon>
+    </ion-fab-button>
+    <ion-fab-button [disabled]="locating()" (click)="photoAtMyLocation()">
+      <ion-icon name="camera-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <ion-modal
+    [isOpen]="isModalOpen()"
+    [initialBreakpoint]="0.5"
+    [breakpoints]="[0, 0.5, 0.9]"
+    [handle]="true"
+    (didDismiss)="onModalDismissed()"
+  >
+    <ng-template>
+      @if (selectedPoint(); as point) {
+      <app-photo-form
+        [position]="point"
+        (cancelled)="closeModal()"
+        (saved)="onSaved($event)"
+      />
+      }
+    </ng-template>
+  </ion-modal>
 </ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div class="coords">
+      @if (selectedPoint(); as point) { Lat: {{ point.lat | number: '1.6-6' }} ·
+      Lng: {{ point.lng | number: '1.6-6' }} } @else { Toca el mapa para
+      seleccionar un punto }
+    </div>
+  </ion-toolbar>
+</ion-footer>

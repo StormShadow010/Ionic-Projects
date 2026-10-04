@@ -1,0 +1,39 @@
+<ion-content class="ion-padding">
+  <div class="form-header">
+    <h2>Nuevo registro</h2>
+    <p class="coords">
+      <ion-icon name="location-outline"></ion-icon>
+      {{ position().lat | number: "1.6-6" }},
+      {{ position().lng | number: "1.6-6" }}
+    </p>
+  </div>
+
+  @if (photo(); as p) {
+    <img class="preview" [src]="p.webPath" alt="Foto del lugar" />
+  }
+
+  <ion-button expand="block" fill="outline" (click)="takePhoto()">
+    <ion-icon slot="start" name="camera-outline"></ion-icon>
+    @if (photo()) {
+      Cambiar foto
+    } @else {
+      Tomar foto
+    }
+  </ion-button>
+
+  <ion-textarea
+    label="Descripción"
+    labelPlacement="floating"
+    fill="outline"
+    [autoGrow]="true"
+    placeholder="¿Qué hay en este lugar?"
+    (ionInput)="description.set($any($event.target).value ?? '')"
+  ></ion-textarea>
+
+  <div class="actions">
+    <ion-button fill="clear" color="medium" (click)="cancelled.emit()"
+      >Cancelar</ion-button
+    >
+    <ion-button [disabled]="!canSave()" (click)="save()">Guardar</ion-button>
+  </div>
+</ion-content>

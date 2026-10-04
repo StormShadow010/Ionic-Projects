@@ -36,3 +36,29 @@
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
 @import "leaflet/dist/leaflet.css";
+
+.photo-popup {
+  width: 200px;
+
+  img {
+    display: block;
+    width: 200px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin: 0 0 4px;
+  }
+
+  .description {
+    font-weight: 600;
+  }
+
+  .meta {
+    font-size: 0.8rem;
+    color: #666;
+  }
+}
